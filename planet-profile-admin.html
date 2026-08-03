@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colony Archive — Planet Profile</title>
+<style>
+  :root { --bg:#0b0f19; --card-bg:#161e2e; --primary:#38bdf8; --earth:#4ade80; --text:#f1f5f9; --text-muted:#94a3b8; --border:#1e293b; }
+  body { font-family:'Courier New',Courier,monospace; background:var(--bg); color:var(--text); max-width:800px; margin:0 auto; padding:20px; }
+  .header { border-bottom:2px solid var(--primary); padding-bottom:10px; margin-bottom:20px; text-align:center; }
+  .status-bar { background:var(--card-bg); border:1px solid var(--border); padding:10px 15px; border-radius:6px; font-size:14px; color:var(--primary); margin-bottom:20px; }
+  label { display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px; letter-spacing:1px; }
+  input, textarea, select { width:100%; padding:15px; background:var(--card-bg); border:1px solid var(--primary); color:#fff; font-size:16px; font-family:inherit; border-radius:6px; box-sizing:border-box; }
+  form { display:flex; flex-direction:column; gap:18px; }
+  button { padding:14px 20px; background:var(--primary); color:#0b0f19; border:none; border-radius:6px; font-family:inherit; font-size:15px; font-weight:bold; cursor:pointer; }
+  button:hover { background:#7dd3fc; }
+  button.ghost { background:transparent; color:var(--text-muted); border:1px solid var(--border); font-weight:normal; padding:6px 10px; font-size:12px; }
+  button.ghost:hover { color:#7dd3fc; border-color:#7dd3fc; background:transparent; }
+  .row { display:flex; gap:10px; align-items:flex-end; }
+  .tabs { display:flex; gap:20px; margin-bottom:24px; font-size:13px; letter-spacing:1px; }
+  .subtabs { margin-top:-12px; padding-left:14px; border-left:2px solid var(--border); font-size:12px; color:var(--text-muted); }
+  .subtabs a { color:var(--text-muted); }
+  .subtabs a:hover { color:#7dd3fc; }
+  a { color:var(--primary); }
+  a:hover { color:#7dd3fc; }
+  .hidden { display:none; }
+  h2 { font-size:14px; letter-spacing:1px; color:var(--text-muted); font-weight:normal; margin:32px 0 12px; }
+  .entry { background:var(--card-bg); border-left:4px solid var(--border); padding:15px; margin-bottom:14px; border-radius:0 6px 6px 0; }
+  .entry.filled { border-left-color:var(--primary); }
+  .entry .cat { font-size:12px; letter-spacing:2px; color:var(--text-muted); margin-bottom:10px; }
+  .entry .earth { font-size:13px; color:var(--earth); line-height:1.6; margin:0 0 12px; }
+  .pub { display:inline-flex; align-items:center; gap:9px; margin:12px 0 0; font-size:12px; letter-spacing:1px; color:var(--text-muted); cursor:pointer; }
+  .pub input { width:auto; padding:0; margin:0; accent-color:var(--primary); }
+  .pub.on { color:var(--primary); }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>[ PLANET PROFILE ]</h1>
+    <p style="color:var(--text-muted);">Authorized personnel only.</p>
+  </div>
+  <div class="tabs">
+    <a href="index.html">TERMINAL</a>
+    <a href="all-logs.html">ALL LOGS</a>
+    <a href="situation-room.html">SITUATION ROOM</a>
+    <a href="central-command.html">CENTRAL COMMAND</a>
+  </div>
+  <div class="tabs subtabs hidden" id="adminTabs">
+    <a href="central-command.html">TELEMETRY</a>
+    <a href="add-log.html">ADD LOG</a>
+    <a href="departments.html">DEPARTMENTS</a>
+    <a href="situations.html">SITUATIONS</a>
+    <a href="planet-profile-admin.html" style="color:var(--text);text-decoration:none;">PLANET PROFILE</a>
+  </div>
+  <div id="gate">
+    <div class="status-bar">🔒 Clearance code required.</div>
+    <form id="loginForm">
+      <div>
+        <label for="pw">CLEARANCE CODE</label>
+        <input type="password" id="pw" autocomplete="off" placeholder="Enter code...">
+      </div>
+      <button type="submit">UNLOCK</button>
+    </form>
+  </div>
+
+  <div id="panel" class="hidden">
+    <div class="status-bar" id="panelStatus">✅ Access granted. Anything left blank shows as “Data not yet collected” to students.</div>
+
+    <h2>THIS PLANET — MEASUREMENTS ON FILE</h2>
+    <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px;">Record readings in imperial units — miles, °F — to match Earth’s column. Mass and gravity are metric (kg, m/s²).</p>
+    <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px;">Type figures in whenever you like — they stay private until you tick <span style="color:var(--primary);">RELEASE TO STUDENTS</span>. Anything unreleased still reads “Data not yet collected” on the public page.</p>
+    <div class="row" style="gap:10px;margin:0 0 20px;">
+      <button type="button" class="ghost" id="pubAll" style="padding:9px 14px;">RELEASE EVERYTHING FILLED IN</button>
+      <button type="button" class="ghost" id="pubNone" style="padding:9px 14px;">HIDE EVERYTHING</button>
+    </div>
+    <form id="profileForm"></form>
+
+    <h2>OTHER COLLECTED INFORMATION</h2>
+    <p style="color:var(--text-muted);font-size:13px;margin:0 0 12px;">Anything interesting about this planet that the categories above don’t cover. Leave a blank line between paragraphs. Blank means the section stays hidden from students.</p>
+    <textarea id="notes" placeholder="e.g. The northern ridge glows faintly for an hour after sunset..." style="width:100%;padding:15px;background:var(--card-bg);border:1px solid var(--primary);color:#fff;font-size:16px;font-family:inherit;border-radius:6px;box-sizing:border-box;min-height:150px;line-height:1.5;resize:vertical;"></textarea>
+    <label class="pub" for="pubNotes" style="margin-top:12px;">
+      <input type="checkbox" id="pubNotes">
+      RELEASE TO STUDENTS
+    </label>
+
+    <div class="row" style="margin-top:20px;gap:12px;">
+      <button type="submit" form="profileForm" style="flex:1;">SAVE PROFILE</button>
+      <button type="button" id="clearBtn" class="ghost" style="padding:14px 20px;">CLEAR ALL ENTRIES</button>
+    </div>
+
+    <div style="text-align:center;margin-top:28px;">
+      <a href="planet-profile.html">View the public Planet Profile page &rarr;</a>
+    </div>
+  </div>
+
+<script src="logs-data.js"></script>
+<script>
+  const form = document.getElementById('profileForm');
+  const panelStatus = document.getElementById('panelStatus');
+
+  function render() {
+    const rows = loadProfile();
+    form.innerHTML = rows.map(r => `
+      <div class="entry${r.planet ? ' filled' : ''}">
+        <div class="cat">${escapeHtml(r.label)}</div>
+        <p class="earth">EARTH — ${escapeHtml(r.earth)}</p>
+        <label for="p-${r.key}">THIS PLANET</label>
+        <input type="text" id="p-${r.key}" data-key="${r.key}" value="${escapeHtml(r.planet)}" placeholder="Leave blank — students see “Data not yet collected”">
+        <label class="pub${r.published ? ' on' : ''}" for="pub-${r.key}">
+          <input type="checkbox" id="pub-${r.key}" data-pub="${r.key}"${r.published ? ' checked' : ''}>
+          RELEASE TO STUDENTS
+        </label>
+      </div>`).join('');
+
+    form.querySelectorAll('[data-pub]').forEach(cb =>
+      cb.addEventListener('change', () => cb.closest('.pub').classList.toggle('on', cb.checked)));
+    document.getElementById('notes').value = loadProfileNotes();
+    const notesCb = document.getElementById('pubNotes');
+    if (notesCb) {
+      notesCb.checked = loadPublished().includes('__notes');
+      notesCb.closest('.pub').classList.toggle('on', notesCb.checked);
+    }
+    const filled = rows.filter(r => r.planet).length;
+    const live = rows.filter(r => r.planet && r.published).length;
+    panelStatus.innerText = '✅ ' + filled + ' of ' + rows.length + ' categories measured · ' + live + ' released to students.';
+  }
+
+  form.addEventListener('submit', ev => {
+    ev.preventDefault();
+    const rows = loadProfile().map(r => Object.assign({}, r, {
+      planet: form.querySelector(`[data-key="${r.key}"]`).value
+    }));
+    saveProfile(rows);
+    saveProfileNotes(document.getElementById('notes').value);
+    const pub = Array.from(form.querySelectorAll('[data-pub]:checked')).map(cb => cb.dataset.pub);
+    if (document.getElementById('pubNotes').checked) pub.push('__notes');
+    savePublished(pub);
+    render();
+    const live = loadProfile().filter(r => r.planet && r.published).length;
+    panelStatus.innerText = '🪐 Profile saved. ' + live + ' measurement' + (live === 1 ? ' is' : 's are') + ' visible to students.';
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    localStorage.removeItem(window.PROFILE_KEY);
+    localStorage.removeItem(window.PROFILE_NOTES_KEY);
+    localStorage.removeItem(window.PROFILE_PUB_KEY);
+    render();
+    panelStatus.innerText = '↺ All entries cleared. Every category reads “Data not yet collected” again.';
+  });
+
+  document.getElementById('pubAll').addEventListener('click', () => {
+    form.querySelectorAll('[data-pub]').forEach(cb => {
+      const val = form.querySelector(`[data-key="${cb.dataset.pub}"]`).value.trim();
+      cb.checked = !!val;
+      cb.closest('.pub').classList.toggle('on', cb.checked);
+    });
+    const n = document.getElementById('pubNotes');
+    n.checked = !!document.getElementById('notes').value.trim();
+    n.closest('.pub').classList.toggle('on', n.checked);
+    panelStatus.innerText = 'Ticked everything with a value — press SAVE PROFILE to release it.';
+  });
+  document.getElementById('pubNone').addEventListener('click', () => {
+    form.querySelectorAll('[data-pub]').forEach(cb => { cb.checked = false; cb.closest('.pub').classList.remove('on'); });
+    const n = document.getElementById('pubNotes');
+    n.checked = false; n.closest('.pub').classList.remove('on');
+    panelStatus.innerText = 'Unticked everything — press SAVE PROFILE to hide it from students.';
+  });
+
+  const PASSWORD = 'colony2187';
+  const gate = document.getElementById('gate');
+  const panel = document.getElementById('panel');
+  function unlock() {
+    document.getElementById('adminTabs').classList.remove('hidden');
+    gate.classList.add('hidden');
+    panel.classList.remove('hidden');
+    render();
+  }
+  if (sessionStorage.getItem('exo-auth') === 'ok') unlock();
+  document.getElementById('loginForm').addEventListener('submit', e => {
+    e.preventDefault();
+    if (document.getElementById('pw').value === PASSWORD) {
+      sessionStorage.setItem('exo-auth', 'ok');
+      unlock();
+    } else {
+      const s = gate.querySelector('.status-bar');
+      s.innerText = '❌ Clearance denied. Try again.';
+      s.style.color = '#f87171'; s.style.borderColor = '#f87171';
+      document.getElementById('pw').value = '';
+    }
+  });
+</script>
+</body>
+</html>

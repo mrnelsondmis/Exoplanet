@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colony Archive — Central Command</title>
+<style>
+  :root { --bg:#0b0f19; --card-bg:#161e2e; --primary:#38bdf8; --text:#f1f5f9; --text-muted:#94a3b8; --border:#1e293b; }
+  body { font-family:'Courier New',Courier,monospace; background:var(--bg); color:var(--text); max-width:800px; margin:0 auto; padding:20px; }
+  .header { border-bottom:2px solid var(--primary); padding-bottom:10px; margin-bottom:20px; text-align:center; }
+  .status-bar { background:var(--card-bg); border:1px solid var(--border); padding:10px 15px; border-radius:6px; font-size:14px; color:var(--primary); margin-bottom:20px; }
+  label { display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px; letter-spacing:1px; }
+  input, textarea, select { width:100%; padding:15px; background:var(--card-bg); border:1px solid var(--primary); color:#fff; font-size:16px; font-family:inherit; border-radius:6px; box-sizing:border-box; }
+  input[type=color] { padding:4px; height:52px; cursor:pointer; }
+  textarea { min-height:120px; line-height:1.5; resize:vertical; }
+  form { display:flex; flex-direction:column; gap:18px; }
+  button { padding:14px 20px; background:var(--primary); color:#0b0f19; border:none; border-radius:6px; font-family:inherit; font-size:15px; font-weight:bold; cursor:pointer; }
+  button:hover { background:#7dd3fc; }
+  button.ghost { background:transparent; color:var(--text-muted); border:1px solid var(--border); font-weight:normal; padding:6px 10px; font-size:12px; }
+  button.ghost:hover { color:#7dd3fc; border-color:#7dd3fc; background:transparent; }
+  button.danger:hover { color:#f87171; border-color:#f87171; }
+  .card { background:var(--card-bg); border-left:4px solid var(--primary); padding:15px; margin-bottom:15px; border-radius:0 6px 6px 0; }
+  .card-meta { font-size:12px; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; }
+  .card-title { font-size:18px; color:var(--primary); margin:0 0 10px 0; }
+  .row { display:flex; gap:10px; align-items:flex-end; }
+  .tabs { display:flex; gap:20px; margin-bottom:24px; font-size:13px; letter-spacing:1px; }
+  a { color:var(--primary); }
+  a:hover { color:#7dd3fc; }
+  .subtabs { margin-top:-12px; padding-left:14px; border-left:2px solid var(--border); font-size:12px; color:var(--text-muted); }
+  .subtabs a { color:var(--text-muted); }
+  .subtabs a:hover { color:#7dd3fc; }
+  .hidden { display:none; }
+  h2 { font-size:14px; letter-spacing:1px; color:var(--text-muted); font-weight:normal; margin:32px 0 12px; }
+
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>[ CENTRAL COMMAND ]</h1>
+    <p style="color:var(--text-muted);">Authorized personnel only.</p>
+  </div>
+  <div class="tabs">
+    <a href="index.html">TERMINAL</a>
+    <a href="all-logs.html">ALL LOGS</a>
+    <a href="situation-room.html">SITUATION ROOM</a>
+    <a href="central-command.html">CENTRAL COMMAND</a>
+  </div>
+  <div class="tabs subtabs hidden" id="adminTabs">
+    <a href="central-command.html" style="color:var(--text);text-decoration:none;">TELEMETRY</a>
+    <a href="add-log.html">ADD LOG</a>
+    <a href="departments.html">DEPARTMENTS</a>
+    <a href="situations.html">SITUATIONS</a>
+    <a href="planet-profile-admin.html">PLANET PROFILE</a>
+  </div>
+  <div id="gate">
+    <div class="status-bar">🔒 Clearance code required.</div>
+    <form id="loginForm">
+      <div>
+        <label for="pw">CLEARANCE CODE</label>
+        <input type="password" id="pw" autocomplete="off" placeholder="Enter code...">
+      </div>
+      <button type="submit">UNLOCK</button>
+    </form>
+  </div>
+
+  <div id="panel" class="hidden">
+    <div class="status-bar" id="panelStatus">✅ Access granted. Telemetry, Add Log and Departments are open above. These readings display on the terminal telemetry bar.</div>
+
+    <h2>PLANETARY ENVIRONMENT VARIABLES</h2>
+    <form id="telemForm"></form>
+
+    <div class="row" style="margin-top:20px;gap:12px;">
+      <button type="submit" form="telemForm" style="flex:1;">SAVE READINGS</button>
+      <button type="button" id="resetBtn" class="ghost" style="padding:14px 20px;">RESTORE DEFAULTS</button>
+    </div>
+  </div>
+
+<script src="logs-data.js"></script>
+<script>
+  const form = document.getElementById('telemForm');
+  const panelStatus = document.getElementById('panelStatus');
+
+  function render() {
+    const telem = loadTelemetry();
+    form.innerHTML = telem.map((x, i) => {
+      if (x.bands) {
+        const now = currentBand(x);
+        return `
+        <div>
+          <label>${escapeHtml(x.label)} — RANGE BY TIME OF DAY</label>
+          <p style="color:var(--text-muted);font-size:13px;margin:0 0 12px;">
+            Terminal shows the band matching the visitor's local clock. Currently ${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')} — showing ${now ? escapeHtml(now.name) : '—'}.
+          </p>
+          ${x.bands.map((b, bi) => `
+            <div class="row" style="margin-bottom:10px;align-items:center;">
+              <div style="flex:1.2;">
+                <label>BAND</label>
+                <input type="text" value="${escapeHtml(b.name)}" data-band="${bi}" data-f="name" style="padding:10px;font-size:14px;">
+              </div>
+              <div style="width:110px;">
+                <label>STARTS (HR)</label>
+                <input type="number" min="0" max="23.5" step="0.5" value="${b.start}" data-band="${bi}" data-f="start" style="padding:10px;font-size:14px;">
+              </div>
+              <div style="width:100px;">
+                <label>MIN</label>
+                <input type="number" value="${b.min}" data-band="${bi}" data-f="min" style="padding:10px;font-size:14px;">
+              </div>
+              <div style="width:100px;">
+                <label>MAX</label>
+                <input type="number" value="${b.max}" data-band="${bi}" data-f="max" style="padding:10px;font-size:14px;">
+              </div>
+            </div>`).join('')}
+          <div style="width:140px;margin-top:6px;">
+            <label>UNIT</label>
+            <input type="text" value="${escapeHtml(x.unit || '°C')}" data-key="${x.key}" data-f="unit" style="padding:10px;font-size:14px;">
+          </div>
+        </div>`;
+      }
+      return `
+      <div>
+        <label for="t${i}">${escapeHtml(x.label)}</label>
+        <input type="text" id="t${i}" data-key="${x.key}" value="${escapeHtml(x.value)}" required>
+      </div>`;
+    }).join('');
+  }
+
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const vals = loadTelemetry().map(x => {
+      if (x.bands) {
+        const unitInp = form.querySelector(`[data-key="${x.key}"][data-f="unit"]`);
+        const bands = x.bands.map((b, bi) => ({
+          name: form.querySelector(`[data-band="${bi}"][data-f="name"]`).value.trim() || b.name,
+          start: Number(form.querySelector(`[data-band="${bi}"][data-f="start"]`).value),
+          min: Number(form.querySelector(`[data-band="${bi}"][data-f="min"]`).value),
+          max: Number(form.querySelector(`[data-band="${bi}"][data-f="max"]`).value)
+        }));
+        return Object.assign({}, x, { bands, unit: unitInp.value.trim() || x.unit });
+      }
+      const inp = form.querySelector(`[data-key="${x.key}"]:not([data-f])`);
+      return Object.assign({}, x, { value: inp.value.trim() });
+    });
+    saveTelemetry(vals);
+    panelStatus.innerText = '📡 Readings updated. The terminal telemetry bar now shows these values.';
+    render();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    localStorage.removeItem(window.TELEM_KEY);
+    panelStatus.innerText = '↺ Readings restored to defaults.';
+    render();
+  });
+
+  const PASSWORD = 'colony2187';
+  const gate = document.getElementById('gate');
+  const panel = document.getElementById('panel');
+  function unlock() { document.getElementById('adminTabs').classList.remove('hidden'); gate.classList.add('hidden'); panel.classList.remove('hidden'); render(); }
+  if (sessionStorage.getItem('exo-auth') === 'ok') unlock();
+  document.getElementById('loginForm').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    if (document.getElementById('pw').value === PASSWORD) {
+      sessionStorage.setItem('exo-auth', 'ok');
+      unlock();
+    } else {
+      const s = gate.querySelector('.status-bar');
+      s.innerText = '❌ Clearance denied. Try again.';
+      s.style.color = '#f87171'; s.style.borderColor = '#f87171';
+      document.getElementById('pw').value = '';
+    }
+  });
+</script>
+</body>
+</html>

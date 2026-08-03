@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Department Logs — Colony Archives</title>
+  <style>
+    :root { --bg:#0b0f19; --card-bg:#161e2e; --primary:#38bdf8; --text:#f1f5f9; --text-muted:#94a3b8; --border:#1e293b; --dept:#38bdf8; }
+    body { font-family:'Courier New',Courier,monospace; background-color:var(--bg); color:var(--text); max-width:800px; margin:0 auto; padding:20px; }
+    a { color:var(--primary); }
+    a:hover { color:#7dd3fc; }
+    .header { border-bottom:2px solid var(--dept); padding-bottom:10px; margin-bottom:20px; text-align:center; }
+    .header h1 { color:var(--dept); margin:0 0 6px; }
+    .back-link { display:inline-block; font-size:12px; letter-spacing:3px; color:var(--text-muted); text-decoration:none; margin-bottom:18px; }
+    .back-link:hover { color:var(--dept); }
+    .search-row { display:flex; gap:10px; margin-bottom:16px; }
+    .search-row input { flex:1; background:var(--card-bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:inherit; font-size:15px; padding:13px 15px; }
+    .search-row input:focus { outline:2px solid var(--dept); outline-offset:1px; border-color:var(--dept); }
+    .crew-filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+    .chip { background:transparent; border:1px solid var(--border); color:var(--text-muted); font-family:inherit; font-size:11px; letter-spacing:1px; padding:6px 12px; border-radius:4px; cursor:pointer; }
+    .chip:hover { color:var(--dept); border-color:var(--dept); }
+    .chip.active { color:#0b0f19; border-color:var(--dept); background:var(--dept); }
+    .chip:focus-visible { outline:2px solid var(--dept); outline-offset:2px; }
+    .count-note { font-size:13px; letter-spacing:1px; color:var(--text-muted); margin-bottom:16px; }
+    .card { background:var(--card-bg); border-left:4px solid var(--dept); padding:15px; margin-bottom:15px; border-radius:0 6px 6px 0; }
+    .card-meta { font-size:12px; color:var(--text-muted); margin-bottom:8px; }
+    .card-title { font-size:18px; color:var(--dept); margin:0 0 10px; }
+    .empty { font-size:14px; color:var(--text-muted); line-height:1.6; }
+    .footer-actions { display:flex; flex-direction:column; align-items:center; gap:14px; margin:48px 0 12px; }
+    .archive-btn { display:inline-block; border:1px solid var(--dept); color:var(--dept); background:transparent; text-decoration:none; font-family:inherit; font-size:13px; letter-spacing:3px; padding:12px 26px; border-radius:6px; }
+    .archive-btn:hover { background:rgba(148,163,184,0.12); }
+  </style>
+</head>
+<body>
+
+  <a class="back-link" href="index.html">&larr; RETURN TO BASE MAP</a>
+
+  <div class="header">
+    <h1 id="deptTitle">[ DEPARTMENT LOGS ]</h1>
+    <p style="color:var(--text-muted);margin:0;" id="deptSub">Records filed by this department</p>
+  </div>
+
+  <div class="search-row">
+    <input id="searchInput" type="search" placeholder="Search this department's logs..." autocomplete="off">
+  </div>
+  <div class="crew-filters" id="crewFilters"></div>
+  <div class="count-note" id="countNote"></div>
+  <div id="logList"></div>
+
+  <div class="footer-actions">
+    <a class="archive-btn" href="all-logs.html">VIEW THE COMPLETE ARCHIVE</a>
+  </div>
+
+  <script src="logs-data.js"></script>
+  <script>
+    const deptId = new URLSearchParams(location.search).get('dept');
+    const dept = loadDepts().find(d => d.id === deptId);
+    const listEl = document.getElementById('logList');
+    const countEl = document.getElementById('countNote');
+    const crewEl = document.getElementById('crewFilters');
+    const searchInput = document.getElementById('searchInput');
+    let member = null;
+
+    if (!dept) {
+      document.getElementById('deptSub').textContent = 'Unknown department.';
+      listEl.innerHTML = '<p class="empty">No such department is registered. Return to the base map and pick a facility.</p>';
+    } else {
+      document.documentElement.style.setProperty('--dept', dept.color);
+      document.title = dept.name + ' Logs — Colony Archives';
+      document.getElementById('deptTitle').textContent = '[ ' + dept.name.toUpperCase() + ' ]';
+      document.getElementById('deptSub').textContent = 'Every record filed by this department';
+      searchInput.placeholder = 'Search ' + dept.name + ' logs by keyword or tag...';
+
+      const logs = visibleLogs().filter(l => l.dept === dept.id);
+
+      crewEl.innerHTML = '<button class="chip active" data-member="">ALL CREW</button>' +
+        (dept.members || []).map(m =>
+          `<button class="chip" data-member="${escapeHtml(m)}">${escapeHtml(m.split(',')[0].toUpperCase())}</button>`).join('');
+
+      crewEl.querySelectorAll('.chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          member = btn.dataset.member || null;
+          crewEl.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b === btn));
+          render();
+        });
+      });
+
+      searchInput.addEventListener('input', render);
+      render();
+    }
+
+    function render() {
+      const q = searchInput.value.trim().toLowerCase();
+      const docs = visibleLogs()
+        .filter(l => l.dept === dept.id)
+        .filter(l => !member || l.author === member)
+        .filter(l => !q || [l.label, l.title, l.content, l.earth || '', l.author || '', (l.tags || []).join(' ')]
+          .join(' ').toLowerCase().includes(q));
+
+      countEl.textContent = docs.length + ' LOG' + (docs.length === 1 ? '' : 'S') +
+        (member ? ' BY ' + member.split(',')[0].toUpperCase() : '') +
+        (q ? ' MATCHING "' + q.toUpperCase() + '"' : '');
+
+      if (!docs.length) {
+        listEl.innerHTML = '<p class="empty">' +
+          (q || member ? 'No logs in this department match that filter.' : 'This department has not filed any logs yet.') +
+          '</p>';
+        return;
+      }
+
+      listEl.innerHTML = docs.map(doc => `
+        <div class="card">
+          <div class="card-meta">[${escapeHtml(doc.label)}]${tagLine(doc.tags)}</div>
+          <h3 class="card-title">${escapeHtml(doc.title)}</h3>
+          ${contentHtml(doc.content)}
+          ${earthHtml(doc.earth, dept.color)}
+          ${doc.author ? `<p style="margin:12px 0 0;font-size:12px;letter-spacing:1px;color:${dept.color};">SUBMITTED - ${escapeHtml(doc.author)}</p>` : ''}
+        </div>`).join('');
+    }
+  </script>
+</body>
+</html>

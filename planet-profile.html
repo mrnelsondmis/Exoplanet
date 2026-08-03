@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planet Profile — Colony Archives</title>
+  <style>
+    :root { --bg:#0b0f19; --card-bg:#161e2e; --primary:#38bdf8; --earth:#4ade80; --text:#f1f5f9; --text-muted:#94a3b8; --border:#1e293b; }
+    body { font-family:'Courier New',Courier,monospace; background:var(--bg); color:var(--text); max-width:980px; margin:0 auto; padding:20px; }
+    a { color:var(--primary); }
+    a:hover { color:#7dd3fc; }
+    .back-link { display:inline-block; font-size:12px; letter-spacing:3px; color:var(--text-muted); text-decoration:none; margin-bottom:18px; }
+    .back-link:hover { color:var(--primary); }
+    .header { border-bottom:2px solid var(--primary); padding-bottom:10px; margin-bottom:20px; text-align:center; }
+    .header h1 { margin:0 0 6px; }
+    .intro { font-size:14px; color:var(--text-muted); line-height:1.6; text-align:center; max-width:640px; margin:0 auto 30px; }
+    .col-head { position:sticky; top:0; background:var(--bg); padding:14px 18px; font-size:14px; letter-spacing:3px; text-align:center; border-bottom:2px solid; z-index:2; }
+    .col-head.planet { color:var(--primary); border-color:var(--primary); }
+    .col-head.earth { color:var(--earth); border-color:var(--earth); }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:0; }
+    .cat { grid-column:1 / -1; font-size:11px; letter-spacing:3px; color:var(--text-muted); text-align:center; padding:22px 0 8px; background:var(--bg); z-index:1; }
+    .cell { padding:14px 18px; font-size:15px; line-height:1.6; border-bottom:1px solid var(--border); display:flex; align-items:center; min-height:64px; box-sizing:border-box; }
+    .cell.planet { border-right:1px solid var(--border); color:var(--text); }
+    .cell.earth { color:var(--text); }
+    .cell.empty { color:var(--text-muted); font-style:italic; }
+    .footer-actions { display:flex; flex-direction:column; align-items:center; gap:14px; margin:48px 0 12px; }
+    .archive-btn { display:inline-block; border:1px solid var(--primary); color:var(--primary); background:transparent; text-decoration:none; font-family:inherit; font-size:13px; letter-spacing:3px; padding:12px 26px; border-radius:6px; }
+    .archive-btn:hover { background:rgba(56,189,248,0.14); }
+    @media (max-width:640px) {
+      .cell.planet { border-right:none; }
+      .grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <a class="back-link" href="index.html">&larr; RETURN TO BASE MAP</a>
+
+  <div class="header">
+    <h1>[ PLANET PROFILE ]</h1>
+    <p style="color:var(--text-muted);margin:0;">Our planet, side by side with Earth</p>
+  </div>
+
+  <p class="intro">Earth's figures are settled science; ours are filled in as the colony measures them — every blank is something nobody has recorded yet.</p>
+
+  <div class="grid" id="grid">
+    <div class="col-head planet">THIS PLANET</div>
+    <div class="col-head earth">EARTH</div>
+  </div>
+
+  <div id="notesSection" style="display:none;margin-top:44px;">
+    <h2 style="font-size:13px;letter-spacing:3px;color:var(--text-muted);font-weight:normal;text-align:center;margin:0 0 6px;">OTHER COLLECTED INFORMATION</h2>
+    <p style="font-size:13px;color:var(--text-muted);text-align:center;margin:0 0 18px;">Findings about this planet that no category above covers</p>
+    <div id="notes" style="background:var(--card-bg);border-left:4px solid var(--primary);padding:20px 22px;border-radius:0 6px 6px 0;"></div>
+  </div>
+
+  <div class="footer-actions">
+    <a class="archive-btn" href="index.html">BACK TO BASE MAP</a>
+  </div>
+
+  <script src="logs-data.js"></script>
+  <script>
+    const grid = document.getElementById('grid');
+    grid.insertAdjacentHTML('beforeend', loadProfile().map(r => {
+      const shown = r.published && r.planet;
+      return `
+      <div class="cat">${escapeHtml(r.label)}</div>
+      <div class="cell planet${shown ? '' : ' empty'}">${escapeHtml(shown ? r.planet : window.NOT_COLLECTED)}</div>
+      <div class="cell earth">${escapeHtml(r.earth)}</div>`;
+    }).join(''));
+
+    const notes = loadPublished().includes('__notes') ? loadProfileNotes() : '';
+    if (notes) {
+      document.getElementById('notesSection').style.display = 'block';
+      document.getElementById('notes').innerHTML = contentHtml(notes, 'margin:0 0 14px;line-height:1.7;font-size:15px;');
+    }
+  </script>
+</body>
+</html>

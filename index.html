@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exo-Planet Colony Terminal</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #161e2e;
+      --primary: #38bdf8;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #1e293b;
+    }
+
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      background-color: var(--bg);
+      color: var(--text);
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+
+    .search-box {
+      width: 100%;
+      padding: 15px;
+      background: var(--card-bg);
+      border: 1px solid var(--primary);
+      color: #fff;
+      font-size: 16px;
+      font-family: inherit;
+      border-radius: 6px;
+      box-sizing: border-box;
+      margin-bottom: 20px;
+    }
+
+    #boot {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 18px;
+      padding: 40px;
+      box-sizing: border-box;
+      z-index: 10;
+      transition: opacity 0.5s ease;
+    }
+
+    #boot h1 { font-size: clamp(22px, 4vw, 38px); color: var(--primary); margin: 0; letter-spacing: 2px; }
+    #boot .sub { color: var(--text-muted); font-size: 14px; letter-spacing: 3px; margin: 0; }
+    #bar { width: min(560px, 100%); height: 22px; border: 1px solid var(--primary); border-radius: 4px; padding: 3px; box-sizing: border-box; }
+    #fill { height: 100%; width: 0%; background: var(--primary); transition: width 0.9s ease; }
+    #connected { font-size: clamp(22px, 4.5vw, 44px); color: #10b981; letter-spacing: 6px; }
+
+    .app { opacity: 0; transition: opacity 0.4s ease; }
+    .app.ready { opacity: 1; }
+
+    .telemetry {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .telemetry div { background: var(--card-bg); padding: 12px 15px; text-align: center; }
+
+    .telemetry .t-label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .telemetry .t-value { font-size: 16px; color: var(--primary); }
+
+    .map-wrap { margin-bottom: 20px; }
+
+    .map-caption {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .map-frame {
+      position: relative;
+      border-radius: 6px;
+      overflow: hidden;
+      line-height: 0;
+    }
+
+    .map-frame img { width: 100%; height: auto; display: block; }
+
+    .hotspot {
+      position: absolute;
+      background: transparent;
+      border: 2px solid var(--glow);
+      border-radius: 10px;
+      padding: 0;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: clamp(10px, 1.5vw, 15px);
+      letter-spacing: 2px;
+      color: transparent;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      box-shadow: 0 0 10px var(--glow), inset 0 0 12px var(--glow-soft);
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+
+    .hotspot span { display: block; padding: 4px; text-align: center; line-height: 1.2; }
+
+    .hotspot:hover, .hotspot:focus-visible, .hotspot.active {
+      background: var(--glow);
+      color: #0b0f19;
+      box-shadow: 0 0 18px var(--glow);
+      outline: none;
+    }
+
+    .hotspot.active { border-width: 3px; }
+
+    .filter-note {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .filter-note button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .filter-note button:hover { color: var(--primary); border-color: var(--primary); }
+
+    .card {
+      background: var(--card-bg);
+      border-left: 4px solid var(--primary);
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .card-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .card-title { font-size: 18px; color: var(--primary); margin: 0 0 10px 0; }
+
+    .idle-note {
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 8px 0 0;
+    }
+
+    .footer-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      margin: 48px 0 12px;
+    }
+
+    .archive-btn {
+      display: inline-block;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      background: transparent;
+      text-decoration: none;
+      font-family: inherit;
+      font-size: 13px;
+      letter-spacing: 3px;
+      padding: 12px 26px;
+      border-radius: 6px;
+    }
+
+    .archive-btn:hover { background: rgba(56,189,248,0.14); }
+    .archive-btn:active { border-color: #0ea5e9; color: #0ea5e9; }
+
+    .command-link {
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    .command-link:hover { color: var(--primary); }
+  </style>
+</head>
+<body>
+
+  <div id="boot">
+    <p class="sub">COLONY ARCHIVE NETWORK</p>
+    <h1>EXOPLANET DATABASE TERMINAL</h1>
+    <div id="bar"><div id="fill"></div></div>
+  </div>
+
+  <div class="app" id="app">
+    <div class="header">
+      <h1 style="text-align: center;">[ EXOPLANET DATABASE TERMINAL ]</h1>
+      <p style="color: var(--text-muted); text-align: center;">Colony Archives</p>
+    </div>
+
+    <div class="telemetry" id="telemetry"></div>
+
+    <div class="map-wrap">
+      <p class="map-caption">BASE SCHEMATIC — SELECT A FACILITY TO PULL ITS DEPARTMENT RECORDS</p>
+      <div class="map-frame">
+        <img src="uploads/Gemini_Generated_Image_8oq1mf8oq1mf8oq1.png" alt="Overhead schematic of the colony base">
+        <a class="hotspot" href="situation-room.html" style="left:43.5%;top:36.5%;width:15.6%;height:7.6%;--glow:#ef4444;--glow-soft:rgba(239,68,68,0.18);"><span>CURRENT SITUATIONS</span></a>
+        <a class="hotspot" href="department.html?dept=sci" data-dept="sci" style="left:65.2%;top:58.6%;width:26.5%;height:14.8%;--glow:#a855f7;--glow-soft:rgba(168,85,247,0.18);"><span>SCIENCE LOGS</span></a>
+        <a class="hotspot" href="department.html?dept=scout" data-dept="scout" style="left:41.9%;top:75.2%;width:19.3%;height:11%;--glow:#ec4899;--glow-soft:rgba(236,72,153,0.18);"><span>SCOUTING LOGS</span></a>
+        <a class="hotspot" href="department.html?dept=eng" data-dept="eng" style="left:43.5%;top:46.9%;width:15.6%;height:7.6%;--glow:#facc15;--glow-soft:rgba(250,204,21,0.18);"><span>ENGINEERING LOGS</span></a>
+      </div>
+    </div>
+
+    <input type="text" id="searchInput" class="search-box" placeholder="Search the archive — try a word like ice, gravity or energy...">
+
+    <div id="resultsHeading"></div>
+    <div id="resultsContainer"></div>
+
+    <div class="footer-actions">
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:14px;">
+        <a class="archive-btn" href="all-logs.html">VIEW ALL LOGS</a>
+        <a class="archive-btn" href="planet-profile.html">PLANET PROFILE</a>
+      </div>
+      <a class="command-link" href="central-command.html">CENTRAL COMMAND — ACCESS RESTRICTED</a>
+    </div>
+  </div>
+
+  <script src="logs-data.js"></script>
+  <script type="module">
+    const rawDatabase = window.visibleLogs();
+
+    let activeDept = null;
+
+    const boot = document.getElementById('boot');
+    const fill = document.getElementById('fill');
+    const resultsHeading = document.getElementById('resultsHeading');
+    const searchInput = document.getElementById('searchInput');
+    const resultsContainer = document.getElementById('resultsContainer');
+
+    function renderTelemetry() {
+      document.getElementById('telemetry').innerHTML = loadTelemetry().map(x => {
+        if (x.bands) {
+          const b = currentBand(x);
+          return `<div><span class="t-label">${x.label}${b ? ' · ' + b.name : ''}</span><span class="t-value">${escapeHtml(tempReading(x))}</span></div>`;
+        }
+        return `<div><span class="t-label">${x.label}</span><span class="t-value">${escapeHtml(x.value)}</span></div>`;
+      }).join('');
+    }
+
+    function renderCards(docs) {
+      resultsContainer.innerHTML = docs.map(doc => {
+        const d = deptOf(doc.dept);
+        const color = d ? d.color : 'var(--primary)';
+        return `
+        <div class="card" style="border-left-color:${color};">
+          <div class="card-meta">
+            <span>[${doc.label}]${d ? ' — FILED BY ' + d.name.toUpperCase() : ''}${tagLine(doc.tags)}</span>
+          </div>
+          <h3 class="card-title" style="color:${color};">${doc.title}</h3>
+          ${contentHtml(doc.content)}
+        ${earthHtml(doc.earth, color)}
+          ${doc.author ? `<p style="margin:12px 0 0;font-size:12px;letter-spacing:1px;color:${color};">SUBMITTED - ${doc.author}</p>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    function deptLabel(id) {
+      const d = loadDepts().find(x => x.id === id);
+      return (d ? d.name : id).toUpperCase();
+    }
+
+    function setHeading(label, withClear) {
+      resultsHeading.innerHTML = `<span class="filter-note"><span>${label}</span>${withClear ? '<button id="clearDept">CLEAR FILTER</button>' : ''}</span>`;
+      const clear = document.getElementById('clearDept');
+      if (clear) clear.addEventListener('click', clearDept);
+    }
+
+    function clearDept() {
+      activeDept = null;
+      document.querySelectorAll('.hotspot').forEach(x => x.classList.remove('active'));
+      performSearch(searchInput.value);
+    }
+
+    function deptFiltered(list) {
+      return activeDept ? list.filter(l => l.dept === activeDept) : list;
+    }
+
+    // Nothing is listed until the visitor picks a facility or types a query.
+    function renderIdle() {
+      resultsHeading.innerHTML = '';
+      resultsContainer.innerHTML = '<p class="idle-note">AWAITING QUERY — SELECT A FACILITY ABOVE OR SEARCH THE ARCHIVE</p>';
+    }
+
+    function renderDept() {
+      const docs = deptFiltered(rawDatabase);
+      setHeading(`${deptLabel(activeDept)} — ${docs.length} LOG${docs.length === 1 ? '' : 'S'} ON FILE`, true);
+      if (!docs.length) {
+        resultsContainer.innerHTML = '<div class="card"><p>No records filed by this department.</p></div>';
+        return;
+      }
+      renderCards(docs);
+    }
+
+    renderTelemetry();
+    renderIdle();
+
+    document.querySelectorAll('button.hotspot').forEach(g => {
+      g.addEventListener('click', () => {
+        activeDept = activeDept === g.dataset.dept ? null : g.dataset.dept;
+        document.querySelectorAll('.hotspot').forEach(x =>
+          x.classList.toggle('active', x.dataset.dept === activeDept));
+        performSearch(searchInput.value);
+      });
+    });
+
+    // Word matching: every word the student types is looked for in the log's
+    // title, tags and text. Runs entirely in the page — nothing to download.
+    const STOPWORDS = new Set(['the','a','an','and','or','of','to','in','on','is','are','was','were','be','for','with','at','by','it','its','this','that','as','from','what','why','how','do','does','did','we','our','you','i','if','can','not','but','has','have','had','there','their','they','about','more','most','than','then','when','which','who','into','over','out','up','down','so','all','any','also','been','being','very','just']);
+
+    function words(text) {
+      return String(text || '').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2 && !STOPWORDS.has(w));
+    }
+
+    // Trim common endings so "crystals" finds "crystal", "freezing" finds "freeze".
+    function stem(w) {
+      return w.replace(/(ies|ing|es|ed|s)$/, m => (m === 'ies' ? 'y' : ''));
+    }
+
+    function docText(doc) {
+      return {
+        title: String(doc.title || '').toLowerCase(),
+        tags: (doc.tags || []).join(' ').toLowerCase(),
+        body: (String(doc.content || '') + ' ' + String(doc.earth || '') + ' ' + String(doc.author || '')).toLowerCase()
+      };
+    }
+
+    // A log matches when EVERY word typed appears somewhere in it. Score only
+    // decides the order: title and tag hits outrank hits buried in the text.
+    function keywordScore(doc, query) {
+      const typed = words(query);
+      if (!typed.length) return 0;
+      const t = docText(doc);
+      let score = 0;
+      for (const w of typed) {
+        const s = stem(w);
+        let hit = 0;
+        if (t.title.includes(w) || t.title.includes(s)) hit += 5;
+        if (t.tags.includes(w) || t.tags.includes(s)) hit += 4;
+        const count = t.body.split(s).length - 1;
+        if (count) hit += Math.min(count, 4);
+        if (!hit) return 0;
+        score += hit;
+      }
+      return score;
+    }
+
+    let shown = 0;
+    const BOOT_FLAG = 'exo-booted';
+    const alreadyBooted = (() => {
+      try { return sessionStorage.getItem(BOOT_FLAG) === '1'; } catch (e) { return false; }
+    })();
+
+    // Skip the uplink sequence when the visitor has already booted this session.
+    if (alreadyBooted) {
+      boot.remove();
+      document.getElementById('app').classList.add('ready');
+    }
+
+    function setProgress(p) {
+      const next = Math.min(100, Math.round(p));
+      if (next <= shown) return;
+      shown = next;
+      if (alreadyBooted) return;
+      fill.style.width = shown + '%';
+    }
+
+    // The uplink sequence is just theatre now — no downloads, so it always finishes.
+    async function initSystem() {
+      if (alreadyBooted) {
+        try { sessionStorage.setItem(BOOT_FLAG, '1'); } catch (e) {}
+        searchInput.focus();
+        return;
+      }
+
+      const steps = [12, 34, 58, 79, 100];
+      for (const p of steps) {
+        setProgress(p);
+        await new Promise(r => setTimeout(r, 420));
+      }
+      try { sessionStorage.setItem(BOOT_FLAG, '1'); } catch (e) {}
+      await new Promise(r => setTimeout(r, 700));
+
+      boot.innerHTML = '<div id="connected">SUCCESSFULLY CONNECTED</div>';
+      await new Promise(r => setTimeout(r, 1800));
+
+      boot.style.opacity = '0';
+      setTimeout(() => boot.remove(), 500);
+      document.getElementById('app').classList.add('ready');
+      searchInput.focus();
+    }
+
+    function performSearch(query) {
+      if (!query.trim()) {
+        if (activeDept) renderDept();
+        else renderIdle();
+        return;
+      }
+      const topMatches = deptFiltered(rawDatabase)
+        .map(doc => ({ ...doc, score: keywordScore(doc, query) }))
+        .filter(d => d.score > 0)
+        .sort((a, b) => b.score - a.score);
+
+      if (topMatches.length === 0) {
+        setHeading('NO MATCHES FOUND' + (activeDept ? ' IN ' + deptLabel(activeDept) : ''), !!activeDept);
+        resultsContainer.innerHTML = '<div class="card"><p>No logs contain that word. Try a single word \u2014 a tag like ATMOSPHERE, or a term from a log such as ice, crystal or pressure.</p></div>';
+        return;
+      }
+
+      setHeading(`${topMatches.length} MATCHING RECORD${topMatches.length > 1 ? 'S' : ''}${activeDept ? ' — ' + deptLabel(activeDept) : ''}`, !!activeDept);
+      renderCards(topMatches);
+    }
+
+    let debounceTimer;
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => performSearch(e.target.value), 150);
+    });
+
+    initSystem();
+  </script>
+</body>
+</html>

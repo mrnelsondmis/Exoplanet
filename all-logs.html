@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Logs — Colony Archives</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #161e2e;
+      --primary: #38bdf8;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #1e293b;
+    }
+
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      background-color: var(--bg);
+      color: var(--text);
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    a { color: var(--primary); }
+    a:hover { color: #7dd3fc; }
+
+    .header {
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+
+    .back-link {
+      display: inline-block;
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: var(--text-muted);
+      text-decoration: none;
+      margin-bottom: 18px;
+    }
+
+    .back-link:hover { color: var(--primary); }
+
+    .count-note {
+      font-size: 13px;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .sector-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 22px;
+    }
+
+    .chip {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 1px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .chip:hover { color: var(--chip, var(--primary)); border-color: var(--chip, var(--primary)); }
+    .chip.active { color: #0b0f19; border-color: var(--chip, var(--primary)); background: var(--chip, var(--primary)); }
+    .chip:focus-visible { outline: 2px solid var(--chip, var(--primary)); outline-offset: 2px; }
+
+    .card {
+      background: var(--card-bg);
+      border-left: 4px solid var(--primary);
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .card-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .card-title { font-size: 18px; color: var(--primary); margin: 0 0 10px 0; }
+
+    .footer-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      margin: 48px 0 12px;
+    }
+
+    .archive-btn {
+      display: inline-block;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      background: transparent;
+      text-decoration: none;
+      font-family: inherit;
+      font-size: 13px;
+      letter-spacing: 3px;
+      padding: 12px 26px;
+      border-radius: 6px;
+    }
+
+    .archive-btn:hover { background: rgba(56,189,248,0.14); }
+    .archive-btn:active { border-color: #0ea5e9; color: #0ea5e9; }
+  </style>
+</head>
+<body>
+
+  <a class="back-link" href="index.html">&larr; RETURN TO BASE MAP</a>
+
+  <div class="header">
+    <h1 style="text-align: center;">[ COMPLETE LOG ARCHIVE ]</h1>
+    <p style="color: var(--text-muted); text-align: center;">Every record on file, oldest first</p>
+  </div>
+
+  <div class="count-note" id="countNote"></div>
+  <div class="sector-filters" id="sectorFilters"></div>
+  <div id="logList"></div>
+
+  <div class="footer-actions">
+    <a class="archive-btn" href="index.html">BACK TO BASE MAP</a>
+  </div>
+
+  <script src="logs-data.js"></script>
+  <script>
+    const logs = window.visibleLogs();
+    const listEl = document.getElementById('logList');
+    const countEl = document.getElementById('countNote');
+    const filtersEl = document.getElementById('sectorFilters');
+    let active = null;
+
+    function render() {
+      const docs = active ? logs.filter(l => l.dept === active) : logs;
+      const d = active ? loadDepts().find(x => x.id === active) : null;
+      countEl.textContent = `${docs.length} LOG${docs.length === 1 ? '' : 'S'} ${d ? 'FILED BY ' + d.name.toUpperCase() : 'ON FILE'}`;
+      if (!docs.length) {
+        listEl.innerHTML = '<div class="card"><p style="margin:0;">No records filed by this department.</p></div>';
+        return;
+      }
+      listEl.innerHTML = docs.map(doc => {
+        const d = deptOf(doc.dept);
+        const color = d ? d.color : 'var(--primary)';
+        return `
+        <div class="card" style="border-left-color:${color};">
+          <div class="card-meta">
+            <span>[${escapeHtml(doc.label)}]${d ? ' — FILED BY ' + escapeHtml(d.name.toUpperCase()) : ''}${tagLine(doc.tags)}</span>
+          </div>
+          <h3 class="card-title" style="color:${color};">${escapeHtml(doc.title)}</h3>
+          ${contentHtml(doc.content)}
+        ${earthHtml(doc.earth, color)}
+          ${doc.author ? `<p style="margin:12px 0 0;font-size:12px;letter-spacing:1px;color:${color};">SUBMITTED - ${escapeHtml(doc.author)}</p>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    filtersEl.innerHTML = `<button class="chip active" data-dept="">ALL SECTORS</button>` +
+      window.loadDepts().map(d => `<button class="chip" data-dept="${d.id}" style="--chip:${d.color};">${escapeHtml(d.name.toUpperCase())}</button>`).join('');
+
+    filtersEl.querySelectorAll('.chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        active = btn.dataset.dept || null;
+        filtersEl.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', b === btn));
+        render();
+      });
+    });
+
+    render();
+  </script>
+</body>
+</html>

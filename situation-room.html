@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Situation Room — Colony Archives</title>
+<style>
+  :root { --bg:#0b0f19; --card-bg:#161e2e; --primary:#38bdf8; --alert:#ef4444; --text:#f1f5f9; --text-muted:#94a3b8; --border:#1e293b; }
+  body { font-family:'Courier New',Courier,monospace; background:var(--bg); color:var(--text); max-width:800px; margin:0 auto; padding:20px; }
+  a { color:var(--primary); }
+  a:hover { color:#7dd3fc; }
+  .back-link { display:inline-block; font-size:12px; letter-spacing:3px; color:var(--text-muted); text-decoration:none; margin-bottom:18px; }
+  .back-link:hover { color:var(--primary); }
+  .header { border-bottom:2px solid var(--alert); padding-bottom:10px; margin-bottom:20px; }
+  .header h1 { margin:0 0 6px; }
+  .status-bar { background:var(--card-bg); border:1px solid var(--border); border-left:4px solid var(--alert); padding:12px 15px; border-radius:0 6px 6px 0; font-size:14px; color:var(--text-muted); margin-bottom:28px; }
+  .case { background:var(--card-bg); border-left:4px solid var(--alert); padding:18px; margin-bottom:18px; border-radius:0 6px 6px 0; }
+  .case-meta { display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; font-size:12px; letter-spacing:1px; color:var(--text-muted); margin-bottom:10px; }
+  .case-title { font-size:19px; color:var(--alert); margin:0 0 12px; }
+  .case p { margin:0 0 14px; line-height:1.6; }
+  .pills { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .pill { border:1px solid var(--border); border-radius:999px; padding:4px 12px; font-size:12px; color:var(--text-muted); letter-spacing:1px; }
+  .prompt { font-size:14px; color:var(--text); border-top:1px dashed var(--border); padding-top:14px; margin:0 0 14px; }
+  .ghost { background:transparent; color:var(--text-muted); border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:12px; letter-spacing:1px; padding:8px 14px; cursor:pointer; }
+  .ghost:hover { color:var(--alert); border-color:var(--alert); }
+  .ghost:focus-visible { outline:2px solid var(--alert); outline-offset:2px; }
+  .solve-link { display:inline-block; text-decoration:none; }
+  .solve-link:hover { color:var(--alert); border-color:var(--alert); }
+  .research { display:none; margin-top:34px; }
+  body.focused .research { display:block; }
+  .search-row { display:flex; gap:10px; margin-bottom:18px; }
+  .search-row input { flex:1; background:var(--card-bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:inherit; font-size:14px; padding:11px 14px; }
+  .search-row input:focus { outline:2px solid var(--primary); outline-offset:1px; border-color:var(--primary); }
+  .log-card { background:var(--card-bg); border-left:4px solid var(--primary); padding:15px; margin-bottom:15px; border-radius:0 6px 6px 0; }
+  .log-meta { font-size:12px; color:var(--text-muted); margin-bottom:8px; }
+  .log-title { font-size:17px; color:var(--primary); margin:0 0 10px; }
+  .log-body { margin:0; line-height:1.5; font-size:14px; }
+  .pin-btn { background:transparent; border:1px solid var(--border); color:var(--text-muted); font-family:inherit; font-size:11px; letter-spacing:2px; padding:6px 12px; border-radius:6px; cursor:pointer; margin-top:12px; }
+  .pin-btn:hover { color:var(--primary); border-color:var(--primary); }
+  .pin-btn:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+  .pin-btn.pinned { color:var(--bg); background:var(--primary); border-color:var(--primary); }
+  .empty { font-size:14px; color:var(--text-muted); line-height:1.6; }
+  body.focused .case { display:none; }
+  body.focused .case.active { display:block; }
+  body.focused #list-heading { display:none; }
+  .footer-actions { display:flex; flex-direction:column; align-items:center; gap:14px; margin:48px 0 12px; }
+  .archive-btn { display:inline-block; border:1px solid var(--primary); color:var(--primary); background:transparent; text-decoration:none; font-family:inherit; font-size:13px; letter-spacing:3px; padding:12px 26px; border-radius:6px; }
+  .archive-btn:hover { background:rgba(56,189,248,0.14); }
+  h2 { font-size:13px; letter-spacing:2px; color:var(--text-muted); font-weight:normal; margin:0 0 14px; }
+</style>
+</head>
+<body>
+
+  <a class="back-link" href="index.html">&larr; RETURN TO BASE MAP</a>
+
+  <div class="header">
+    <h1 style="text-align:center;">[ SITUATION ROOM ]</h1>
+    <p style="color:var(--text-muted);margin:0;text-align:center;">Current problems awaiting a scientist's call</p>
+  </div>
+
+  <div class="status-bar">Three situations are unresolved. Consult the archive, think about what the logs actually say, then provide a possible solution to the problem by submitting a Google Form in Canvas.</div>
+
+  <h2 id="list-heading">ACTIVE SITUATIONS</h2>
+
+  <div id="caseList"></div>
+
+  <div class="research">
+    <h2>PINNED EVIDENCE</h2>
+    <div id="pinnedList"><p class="empty" id="pinnedEmpty">Nothing pinned yet. Search the archive below and pin any log that bears on this situation — pinned logs stay put while you keep searching.</p></div>
+
+    <h2 style="margin-top:34px;">SEARCH THE ARCHIVE</h2>
+    <div class="search-row">
+      <input id="searchInput" type="search" placeholder="Search logs by keyword, tag, or department..." autocomplete="off">
+    </div>
+    <div class="count-note" id="resultCount" style="font-size:12px;letter-spacing:1px;color:var(--text-muted);margin-bottom:14px;"></div>
+    <div id="resultList"></div>
+  </div>
+
+  <div class="footer-actions">
+    <a class="archive-btn" href="all-logs.html">CONSULT ALL LOGS</a>
+    <a class="back-link" style="margin:0;" href="index.html">BACK TO BASE MAP</a>
+  </div>
+
+<script src="logs-data.js"></script>
+<script>
+  const situations = loadSituations();
+  document.getElementById('caseList').innerHTML = situations.map(sit => {
+    const dp = deptOf(sit.dept);
+    return `
+    <div class="case" id="${escapeHtml(sit.id)}">
+      <div class="case-meta"><span>${escapeHtml(sit.label)} · PRIORITY ${escapeHtml(sit.priority || 'MEDIUM')}</span><span>${dp ? 'RAISED BY ' + escapeHtml(dp.name.toUpperCase()) : ''}</span></div>
+      <h3 class="case-title">${escapeHtml(sit.title)}</h3>
+      ${(sit.tags || []).length ? '<div class="pills">' + sit.tags.map(t => '<span class="pill">' + escapeHtml(String(t).toUpperCase()) + '</span>').join('') + '</div>' : ''}
+      ${contentHtml(sit.body, 'margin:0 0 14px;line-height:1.6;')}
+      ${sit.prompt ? '<p class="prompt">Q: ' + escapeHtml(sit.prompt) + '</p>' : ''}
+      <a class="ghost solve-link" href="?case=${escapeHtml(sit.id)}">INVESTIGATE FURTHER &rarr;</a>
+    </div>`;
+  }).join('') || '<p class="empty">No situations are open. Central Command can raise one from the Situations panel.</p>';
+
+  const n = situations.length;
+  const words = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'];
+  document.querySelector('.status-bar').textContent =
+    (words[n] || n) + ' situation' + (n === 1 ? ' is' : 's are') +
+    ' unresolved. Consult the archive, think about what the logs actually say, then provide a possible solution to the problem by submitting a Google Form in Canvas.';
+
+  const id = new URLSearchParams(location.search).get('case');
+  const target = id && document.getElementById(id);
+  if (target) {
+    document.body.classList.add('focused');
+    target.classList.add('active');
+    target.querySelector('.solve-link').remove();
+    document.querySelector('.status-bar').textContent = 'One situation in focus. Search the archive below and pin the logs that bear on it.';
+    const back = document.querySelector('.back-link');
+    back.textContent = '\u2190 ALL SITUATIONS';
+    back.href = 'situation-room.html';
+    initResearch();
+  }
+
+  function initResearch() {
+    const logs = window.visibleLogs();
+    const input = document.getElementById('searchInput');
+    const resultList = document.getElementById('resultList');
+    const resultCount = document.getElementById('resultCount');
+    const pinnedList = document.getElementById('pinnedList');
+    const key = 'pinned:' + id;
+    let pinned = [];
+    try { pinned = JSON.parse(sessionStorage.getItem(key)) || []; } catch (e) { pinned = []; }
+
+    const savePins = () => sessionStorage.setItem(key, JSON.stringify(pinned));
+    const deptFor = doc => (window.deptOf ? window.deptOf(doc.dept) : null);
+
+    function cardHtml(doc, isPinned) {
+      const d = deptFor(doc);
+      const color = d ? d.color : 'var(--primary)';
+      const tags = (doc.tags && doc.tags.length) ? ' · ' + doc.tags.map(t => escapeHtml(String(t).toUpperCase())).join(' · ') : '';
+      return `<div class="log-card" style="border-left-color:${color};">
+        <div class="log-meta">[${escapeHtml(doc.label)}]${d ? ' — ' + escapeHtml(d.name.toUpperCase()) : ''}${tags}</div>
+        <h3 class="log-title" style="color:${color};">${escapeHtml(doc.title)}</h3>
+        ${contentHtml(doc.content)}
+        ${earthHtml(doc.earth, color)}
+        <button class="pin-btn${isPinned ? ' pinned' : ''}" data-pin="${escapeHtml(doc.id)}">${isPinned ? 'UNPIN' : 'PIN THIS LOG'}</button>
+      </div>`;
+    }
+
+    function renderPinned() {
+      const docs = pinned.map(pid => logs.find(l => l.id === pid)).filter(Boolean);
+      pinnedList.innerHTML = docs.length
+        ? docs.map(d => cardHtml(d, true)).join('')
+        : '<p class="empty">Nothing pinned yet. Search the archive below and pin any log that bears on this situation — pinned logs stay put while you keep searching.</p>';
+    }
+
+    function renderResults() {
+      const q = input.value.trim().toLowerCase();
+      if (!q) {
+        resultCount.textContent = '';
+        resultList.innerHTML = '<p class="empty">Type a keyword to search the colony archive.</p>';
+        return;
+      }
+      const docs = logs.filter(l => {
+        const d = deptFor(l);
+        const hay = [l.id, l.title, l.content, l.author || '', d ? d.name : '', (l.tags || []).join(' ')].join(' ').toLowerCase();
+        return hay.includes(q);
+      });
+      resultCount.textContent = docs.length + ' MATCH' + (docs.length === 1 ? '' : 'ES');
+      resultList.innerHTML = docs.length
+        ? docs.map(d => cardHtml(d, pinned.includes(d.id))).join('')
+        : '<p class="empty">No logs match that search.</p>';
+    }
+
+    document.querySelector('.research').addEventListener('click', e => {
+      const btn = e.target.closest('[data-pin]');
+      if (!btn) return;
+      const pid = btn.dataset.pin;
+      pinned = pinned.includes(pid) ? pinned.filter(x => x !== pid) : pinned.concat(pid);
+      savePins();
+      renderPinned();
+      renderResults();
+    });
+
+    input.addEventListener('input', renderResults);
+    renderPinned();
+    renderResults();
+  }
+</script>
+</body>
+</html>

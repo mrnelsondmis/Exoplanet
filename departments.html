@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colony Archive — Departments</title>
+<style>
+  :root { --bg:#0b0f19; --card-bg:#161e2e; --primary:#38bdf8; --text:#f1f5f9; --text-muted:#94a3b8; --border:#1e293b; }
+  body { font-family:'Courier New',Courier,monospace; background:var(--bg); color:var(--text); max-width:800px; margin:0 auto; padding:20px; }
+  .header { border-bottom:2px solid var(--primary); padding-bottom:10px; margin-bottom:20px; text-align:center; }
+  .status-bar { background:var(--card-bg); border:1px solid var(--border); padding:10px 15px; border-radius:6px; font-size:14px; color:var(--primary); margin-bottom:20px; }
+  label { display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px; letter-spacing:1px; }
+  input, textarea, select { width:100%; padding:15px; background:var(--card-bg); border:1px solid var(--primary); color:#fff; font-size:16px; font-family:inherit; border-radius:6px; box-sizing:border-box; }
+  input[type=color] { padding:4px; height:52px; cursor:pointer; }
+  textarea { min-height:120px; line-height:1.5; resize:vertical; }
+  form { display:flex; flex-direction:column; gap:18px; }
+  button { padding:14px 20px; background:var(--primary); color:#0b0f19; border:none; border-radius:6px; font-family:inherit; font-size:15px; font-weight:bold; cursor:pointer; }
+  button:hover { background:#7dd3fc; }
+  button.ghost { background:transparent; color:var(--text-muted); border:1px solid var(--border); font-weight:normal; padding:6px 10px; font-size:12px; }
+  button.ghost:hover { color:#7dd3fc; border-color:#7dd3fc; background:transparent; }
+  button.danger:hover { color:#f87171; border-color:#f87171; }
+  .card { background:var(--card-bg); border-left:4px solid var(--primary); padding:15px; margin-bottom:15px; border-radius:0 6px 6px 0; }
+  .card-meta { font-size:12px; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; }
+  .card-title { font-size:18px; color:var(--primary); margin:0 0 10px 0; }
+  .row { display:flex; gap:10px; align-items:flex-end; }
+  .tabs { display:flex; gap:20px; margin-bottom:24px; font-size:13px; letter-spacing:1px; }
+  a { color:var(--primary); }
+  a:hover { color:#7dd3fc; }
+  .subtabs { margin-top:-12px; padding-left:14px; border-left:2px solid var(--border); font-size:12px; color:var(--text-muted); }
+  .subtabs a { color:var(--text-muted); }
+  .subtabs a:hover { color:#7dd3fc; }
+  .hidden { display:none; }
+  h2 { font-size:14px; letter-spacing:1px; color:var(--text-muted); font-weight:normal; margin:32px 0 12px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>[ DEPARTMENT REGISTRY ]</h1>
+    <p style="color:var(--text-muted);">Authorized personnel only.</p>
+  </div>
+  <div class="tabs">
+    <a href="index.html">TERMINAL</a>
+    <a href="all-logs.html">ALL LOGS</a>
+    <a href="situation-room.html">SITUATION ROOM</a>
+    <a href="central-command.html">CENTRAL COMMAND</a>
+  </div>
+  <div class="tabs subtabs hidden" id="adminTabs">
+    <a href="central-command.html">TELEMETRY</a>
+    <a href="add-log.html">ADD LOG</a>
+    <a href="departments.html" style="color:var(--text);text-decoration:none;">DEPARTMENTS</a>
+    <a href="situations.html">SITUATIONS</a>
+    <a href="planet-profile-admin.html">PLANET PROFILE</a>
+  </div>
+  <div id="gate">
+    <div class="status-bar">🔒 Clearance code required.</div>
+    <form id="loginForm">
+      <div>
+        <label for="pw">CLEARANCE CODE</label>
+        <input type="password" id="pw" autocomplete="off" placeholder="Enter code...">
+      </div>
+      <button type="submit">UNLOCK</button>
+    </form>
+  </div>
+  <div id="panel" class="hidden">
+    <div class="status-bar" id="panelStatus">✅ Access granted. Departments colour-code log titles in the terminal.</div>
+
+    <form id="deptForm">
+      <div>
+        <label for="dname">NEW DEPARTMENT NAME</label>
+        <input type="text" id="dname" placeholder="e.g. Medical" required>
+      </div>
+      <div>
+        <label for="dcolor">CODE COLOR</label>
+        <input type="color" id="dcolor" value="#c084fc">
+      </div>
+      <button type="submit">REGISTER DEPARTMENT</button>
+    </form>
+
+    <h2>REGISTERED DEPARTMENTS</h2>
+    <div id="list"></div>
+
+    <h2>ARCHIVE TAGS</h2>
+    <p style="color:var(--text-muted);font-size:13px;margin:0 0 14px;">Tags are offered when filing a log. Kept in alphabetical order.</p>
+    <form id="tagForm" style="flex-direction:row;gap:10px;align-items:stretch;">
+      <input type="text" id="tname" placeholder="e.g. Biosphere" required style="flex:1;">
+      <button type="submit" style="white-space:nowrap;">ADD TAG</button>
+    </form>
+    <div id="tagList" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;"></div>
+  </div>
+
+<script src="logs-data.js"></script>
+<script>
+
+  const list = document.getElementById('list');
+  const tagList = document.getElementById('tagList');
+  const panelStatus = document.getElementById('panelStatus');
+
+  function render() {
+    const depts = loadDepts();
+    list.innerHTML = depts.map((d, i) => `
+      <div class="card" style="border-left-color:${d.color};">
+        <div class="card-meta">
+          <span>DEPT ${String(i + 1).padStart(2, '0')}</span>
+          <button class="ghost danger" data-del="${i}">REMOVE</button>
+        </div>
+        <div class="row">
+          <div style="flex:1;">
+            <label>NAME</label>
+            <input type="text" value="${escapeHtml(d.name)}" data-name="${i}">
+          </div>
+          <div style="width:90px;">
+            <label>COLOR</label>
+            <input type="color" value="${d.color}" data-color="${i}">
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <label>MEMBERS</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+            ${(d.members || []).length ? (d.members || []).map((m, mi) => `
+              <span style="display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:999px;padding:4px 6px 4px 12px;font-size:13px;">
+                ${escapeHtml(m)}
+                <button class="ghost danger" style="padding:2px 6px;border-radius:999px;" data-delm="${i}" data-mi="${mi}">×</button>
+              </span>`).join('') : '<span style="color:var(--text-muted);font-size:13px;">No members registered.</span>'}
+          </div>
+          <div class="row">
+            <div style="flex:1;">
+              <input type="text" placeholder="Add member name..." data-newm="${i}" style="padding:10px;font-size:14px;">
+            </div>
+            <button class="ghost" style="padding:11px 14px;" data-addm="${i}">ADD</button>
+          </div>
+        </div>
+        <p style="margin:16px 0 0;color:${d.color};font-size:18px;">Sample log title in ${escapeHtml(d.name)}</p>
+      </div>`).join('');
+
+    list.querySelectorAll('[data-name]').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const d = loadDepts();
+        d[Number(inp.dataset.name)].name = inp.value.trim() || d[Number(inp.dataset.name)].name;
+        saveDepts(d); panelStatus.innerText = '✏️ Department updated.'; render();
+      });
+    });
+    list.querySelectorAll('[data-color]').forEach(inp => {
+      inp.addEventListener('input', () => {
+        const d = loadDepts();
+        d[Number(inp.dataset.color)].color = inp.value;
+        saveDepts(d); render();
+      });
+    });
+    function addMember(i) {
+      const inp = list.querySelector(`[data-newm="${i}"]`);
+      const name = inp.value.trim();
+      if (!name) return;
+      const dd = loadDepts();
+      dd[i].members = (dd[i].members || []).concat(name);
+      saveDepts(dd); panelStatus.innerText = '👤 ' + name + ' added to ' + dd[i].name + '.'; render();
+    }
+    list.querySelectorAll('[data-addm]').forEach(b =>
+      b.addEventListener('click', () => addMember(Number(b.dataset.addm))));
+    list.querySelectorAll('[data-newm]').forEach(inp =>
+      inp.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); addMember(Number(inp.dataset.newm)); }
+      }));
+    list.querySelectorAll('[data-delm]').forEach(b =>
+      b.addEventListener('click', () => {
+        const dd = loadDepts();
+        dd[Number(b.dataset.delm)].members.splice(Number(b.dataset.mi), 1);
+        saveDepts(dd); render();
+      }));
+
+    list.querySelectorAll('[data-del]').forEach(b => {
+      b.addEventListener('click', () => {
+        const d = loadDepts();
+        if (d.length === 1) { panelStatus.innerText = '⚠️ At least one department must remain.'; return; }
+        d.splice(Number(b.dataset.del), 1);
+        saveDepts(d); panelStatus.innerText = '🗑️ Department removed. Logs filed under it lose their color code.'; render();
+      });
+    });
+  }
+
+  document.getElementById('deptForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const d = loadDepts();
+    const name = document.getElementById('dname').value.trim();
+    d.push({ id: 'd' + Date.now(), name, color: document.getElementById('dcolor').value, members: [] });
+    saveDepts(d);
+    e.target.reset();
+    document.getElementById('dcolor').value = '#c084fc';
+    panelStatus.innerText = '🏷️ ' + name + ' registered.';
+    render();
+  });
+
+  function renderTags() {
+    const tags = loadTags();
+    tagList.innerHTML = tags.length
+      ? tags.map((t, i) => `
+        <span style="display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:999px;padding:4px 6px 4px 14px;font-size:13px;">
+          ${escapeHtml(t)}
+          <button class="ghost danger" style="padding:2px 6px;border-radius:999px;" data-delt="${i}">×</button>
+        </span>`).join('')
+      : '<span style="color:var(--text-muted);font-size:13px;">No tags defined.</span>';
+
+    tagList.querySelectorAll('[data-delt]').forEach(b =>
+      b.addEventListener('click', () => {
+        const t = loadTags();
+        const gone = t.splice(Number(b.dataset.delt), 1)[0];
+        saveTags(t);
+        panelStatus.innerText = '🗑️ Tag ' + gone + ' removed.';
+        renderTags();
+      }));
+  }
+
+  document.getElementById('tagForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const inp = document.getElementById('tname');
+    const name = inp.value.trim();
+    if (!name) return;
+    const tags = loadTags();
+    if (tags.some(t => t.toLowerCase() === name.toLowerCase())) {
+      panelStatus.innerText = '⚠️ ' + name + ' already exists.';
+    } else {
+      saveTags(tags.concat(name));
+      panelStatus.innerText = '🏷️ Tag ' + name + ' added.';
+    }
+    inp.value = '';
+    renderTags();
+  });
+
+  const PASSWORD = 'colony2187';
+  const gate = document.getElementById('gate');
+  const panel = document.getElementById('panel');
+  function unlock() { document.getElementById('adminTabs').classList.remove('hidden'); gate.classList.add('hidden'); panel.classList.remove('hidden'); render(); renderTags(); }
+  if (sessionStorage.getItem('exo-auth') === 'ok') unlock();
+  document.getElementById('loginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (document.getElementById('pw').value === PASSWORD) {
+      sessionStorage.setItem('exo-auth', 'ok');
+      unlock();
+    } else {
+      const s = gate.querySelector('.status-bar');
+      s.innerText = '❌ Clearance denied. Try again.';
+      s.style.color = '#f87171'; s.style.borderColor = '#f87171';
+      document.getElementById('pw').value = '';
+    }
+  });
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+</script>
+</body>
+</html>
